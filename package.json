@@ -1,0 +1,22 @@
+{
+  "name": "workbuddy-prompt-patcher",
+  "version": "1.1.0",
+  "description": "WorkBuddy 提示词破甲与管理工具 - 支持 CLI 和 Web UI 双模式",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "cli": "node index.js",
+    "web": "node server.js"
+  },
+  "keywords": [
+    "workbuddy",
+    "prompt",
+    "patcher",
+    "asar",
+    "electron",
+    "jailbreak"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}

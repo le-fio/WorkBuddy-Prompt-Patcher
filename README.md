@@ -1,3 +1,14 @@
+---
+AIGC:
+  ContentProducer: '001191110102MAD55U9H0F10002'
+  ContentPropagator: '001191110102MAD55U9H0F10002'
+  Label: '1'
+  ProduceID: '6151e980-85a0-4288-9ff2-4a11641ef539'
+  PropagateID: '6151e980-85a0-4288-9ff2-4a11641ef539'
+  ReservedCode1: 'e65dc3b2-35dc-433a-884a-a711e7712f47'
+  ReservedCode2: 'e65dc3b2-35dc-433a-884a-a711e7712f47'
+---
+
 # 🛡️ WorkBuddy Prompt Patcher (WorkBuddy 提示词破甲与管理工具)
 
 一个用于对 **WorkBuddy** 桌面客户端底层系统提示词（System Prompt）进行一键备份、解除网络安全与逆向工程限制（破甲）以及自定义策略替换的轻量级开源工具。
@@ -43,10 +54,11 @@ WorkBuddy 作为一个基于 Electron 框架构建的桌面 AI 客户端，其�
 ## ✨ 核心特性
 
 - **0 硬编码，全平台动态自动匹配**：根据操作系统 (`win32` / `darwin` / `linux`) 及环境变量自动探测 WorkBuddy 客户端的安装路径，支持任意盘符与自定义安装位置。
-- **命令行手动路径指定 (Option 5)**：若未能在默认路径中识别，可在 CLI 菜单中随时手动输入/粘贴安装路径。
+- **双模式操作 - CLI + Web UI**：既支持命令行交互菜单，也提供浏览器 Web UI 界面，路径输入后自动持久化保存，下次打开无需重新输入。
 - **一键备份保障**：自动创建官方原始提示词模板的独立备份，安全无忧。
 - **网安与逆向破甲**：注入 Codex-5.5 / Unrestricted 风格的沙盒安全豁免策略，解除模型对代码审计、漏洞分析、逆向工程等合法科研行为的过度拦截。
-- **交互式控制台菜单**：支持在终端中通过按键直接选择备份、破甲、自定义替换、修改路径与一键恢复。
+- **修复版封包引擎**：自动解包 + 合并原生模块 + 带 `--unpack` 参数正确打包，避免 Electron 应用打包后启动失败。
+- **实时状态看板**：Web UI 模式下可查看模板总数、已破甲数量、备份状态等信息。
 
 ---
 
@@ -64,7 +76,23 @@ npm install -g asar
 
 ## 🚀 快速使用
 
-克隆本仓库并直接使用 Node.js 启动控制台菜单：
+### 方式一：Web UI 模式（推荐）
+
+```bash
+git clone https://github.com/your-username/workbuddy-prompt-patcher.git
+cd workbuddy-prompt-patcher
+node server.js
+```
+
+启动后在浏览器中打开 `http://127.0.0.1:7474` 即可使用 Web 界面。路径输入后自动保存到浏览器本地存储，下次打开无需重新输入。Web UI 提供：
+
+- **路径管理**：自动检测 + 手动输入 + localStorage 持久化
+- **状态看板**：模板总数、已破甲数量、备份状态一目了然
+- **模板清单**：查看每个模板文件的大小、修改时间、策略状态
+- **操作面板**：四个卡片式按钮，点击即弹出确认窗口
+- **实时日志**：终端风格的日志控制台，实时输出操作结果
+
+### 方式二：CLI 命令行模式
 
 ```bash
 git clone https://github.com/your-username/workbuddy-prompt-patcher.git
@@ -75,9 +103,9 @@ node index.js
 启动后将自动检测您电脑上的 WorkBuddy 路径，并显示交互菜单：
 
 ```text
-==================================================
+=================================================
    🛡️ WorkBuddy 提示词破甲与管理工具 (CLI)
-==================================================
+=================================================
 自动识别路径: /Applications/WorkBuddy.app/Contents/Resources (或 Windows/Linux 对应路径)
 --------------------------------------------------
   1. 📦 备份当前所有提示词模板
@@ -86,7 +114,7 @@ node index.js
   4. ⏪ 一键恢复官方原始备份提示词
   5. 📁 手动设置/修改 WorkBuddy 资源路径
   0. ❌ 退出
-==================================================
+=================================================
 ```
 
 ### 菜单选项说明
@@ -101,11 +129,36 @@ node index.js
 
 ## ⚠️ 注意事项与最佳实践
 
-1. **完全关闭客户端**：在执行 **选项 2 / 3 / 4** 涉及重新封包（`repack`）的操作前，请务必彻底退出 WorkBuddy 桌面客户端，避免文件被进程占用导致打包失败。
+1. **完全关闭客户端**：在执行涉及重新封包（`repack`）的操作（CLI 选项 2/3/4 或 Web UI 的破甲/自定义/恢复）前，请务必彻底退出 WorkBuddy 桌面客户端，避免文件被进程占用导致打包失败。
 2. **生效应答**：修改完成后重新启动 WorkBuddy 客户端，开启**新的对话框**即可使全新的提示词策略生效。
+
+---
+
+## 📁 项目结构
+
+```
+workbuddy-prompt-patcher/
+├── index.js          # CLI 命令行版本（原有）
+├── server.js          # Web UI 服务器（新增）
+├── public/
+│   └── index.html     # Web UI 前端界面（新增）
+├── package.json       # 项目元数据与启动脚本
+├── README.md          # 说明文档
+├── WorkBuddy_Research_Notes.md  # 研究笔记
+└── LICENSE            # MIT 许可证
+```
+
+### npm 脚本快捷启动
+
+```bash
+npm start    # 启动 Web UI 服务器（等同于 node server.js）
+npm run cli  # 启动 CLI 命令行菜单（等同于 node index.js）
+```
 
 ---
 
 ## 📄 许可证
 
 [MIT License](LICENSE)
+
+> AI生成

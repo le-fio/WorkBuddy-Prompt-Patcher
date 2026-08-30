@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkBuddy Prompt Patcher</title>
+  <style>
+    :root {
+      --primary: #4A9EFF;
+      --primary-dark: #2D7DD2;
+      --primary-light: #E8F2FF;
+      --success: #52C41A;
+      --warning: #FAAD14;
+      --error: #FF4D4F;
+      --bg: #F0F5FA;
+      --card-bg: #FFFFFF;
+      --text: #1A1A2E;
+      --text-secondary: #6B7280;
+      --border: #E0E0E0;
+      --radius: 10px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.06);
+      --shadow-hover: 0 4px 16px rgba(0,0,0,0.10);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+      font-size: 14px;
+    }
+
+    /* Header */
+    .header {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-logo {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .header h1 { font-size: 18px; font-weight: 600; }
+    .header-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-badge.online {
+      background: #E6F7E6;
+      color: var(--success);
+    }
+    .status-badge.offline {
+      background: #FFF1F0;
+      color: var(--error);
+    }
+
+    /* Path Section */
+    .path-section {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title-icon { font-size: 16px; }
+
+    .path-input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .path-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      transition: border-color 0.2s;
+      font-family: "Consolas", "Courier New", monospace;
+    }
+    .path-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .path-input.valid { border-color: var(--success); }
+    .path-input.invalid { border-color: var(--error); }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary {
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+    .btn-secondary:hover { background: #D0E7FF; }
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+    .btn-success:hover { background: #46A814; }
+    .btn-warning {
+      background: var(--warning);
+      color: #fff;
+    }
+    .btn-warning:hover { background: #D4960F; }
+    .btn-danger {
+      background: var(--error);
+      color: #fff;
+    }
+    .btn-danger:hover { background: #E63946; }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    .path-hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Action Cards */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .action-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+      position: relative;
+      overflow: hidden;
+    }
+    .action-card:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-2px);
+    }
+    .action-card.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .action-card-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    .action-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .action-card-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .action-card.backup { border-top: 3px solid var(--success); }
+    .action-card.patch { border-top: 3px solid var(--primary); }
+    .action-card.custom { border-top: 3px solid var(--warning); }
+    .action-card.restore { border-top: 3px solid var(--text-secondary); }
+
+    /* Info Panel */
+    .info-panel {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .info-item {
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 8px;
+      text-align: center;
+    }
+    .info-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .info-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    /* Template Table */
+    .template-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .template-table th {
+      text-align: left;
+      padding: 10px 12px;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-weight: 600;
+      font-size: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .template-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .template-table tr:hover { background: #F8FBFF; }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .tag.patched { background: #FFF7E6; color: #D48806; }
+    .tag.original { background: #E6F7E6; color: #389E0D; }
+    .tag.unknown { background: #F0F0F0; color: #888; }
+
+    /* Log Console */
+    .log-console {
+      background: #1E1E2E;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 16px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    .log-entry { color: #D4D4D4; }
+    .log-entry.success { color: #6BD08E; }
+    .log-entry.error { color: #F6788A; }
+    .log-entry.warning { color: #FAC863; }
+    .log-entry.info { color: #82AAFF; }
+    .log-empty { color: #666; font-style: italic; }
+    .log-time { color: #666; margin-right: 8px; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.3);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--card-bg);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 560px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-close {
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--text-secondary);
+      background: none;
+      border: none;
+      padding: 4px;
+    }
+    .modal-body { padding: 20px 24px; }
+    .modal-footer {
+      padding: 14px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .modal-textarea {
+      width: 100%;
+      min-height: 180px;
+      padding: 12px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 12px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+    .modal-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .modal-confirm-text {
+      font-size: 14px;
+      line-height: 1.8;
+      margin-bottom: 12px;
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid #ddd;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    .loading-overlay.active { display: flex; }
+    .loading-content { text-align: center; }
+    .loading-spinner-lg {
+      width: 36px; height: 36px;
+      border: 3px solid var(--primary-light);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin: 0 auto 12px;
+    }
+    .loading-text { color: var(--text-secondary); font-size: 13px; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .header { flex-direction: column; gap: 10px; }
+      .path-input-row { flex-direction: column; }
+      .path-input { width: 100%; }
+      .action-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">🛡️</div>
+      <div>
+        <h1>WorkBuddy Prompt Patcher</h1>
+        <div class="header-sub">提示词破甲与管理工具 - Web UI</div>
+      </div>
+    </div>
+    <div class="status-badge offline" id="serverStatus">未连接</div>
+  </div>
+
+  <!-- Path Section -->
+  <div class="path-section">
+    <div class="section-title">
+      <span class="section-title-icon">📁</span>
+      WorkBuddy 资源路径
+    </div>
+    <div class="path-input-row">
+      <input type="text" class="path-input" id="pathInput"
+        placeholder="输入 WorkBuddy 的 resources 目录路径，例如 D:\WorkBuddy\resources"
+        value="">
+      <button class="btn btn-secondary btn-sm" onclick="detectPath()">自动检测</button>
+      <button class="btn btn-primary btn-sm" onclick="saveAndCheckPath()">保存并验证</button>
+    </div>
+    <div class="path-hint" id="pathHint">路径将自动保存到浏览器本地存储，下次打开无需重新输入。</div>
+  </div>
+
+  <!-- Info Panel -->
+  <div class="info-panel" id="infoPanel" style="display:none;">
+    <div class="section-title">
+      <span class="section-title-icon">📊</span>
+      当前状态
+    </div>
+    <div class="info-grid" id="infoGrid">
+      <!-- Dynamic content -->
+    </div>
+  </div>
+
+  <!-- Action Cards -->
+  <div class="action-grid">
+    <div class="action-card backup" id="card-backup" onclick="actionBackup()">
+      <div class="action-card-icon">📦</div>
+      <div class="action-card-title">备份模板</div>
+      <div class="action-card-desc">备份所有官方原始提示词模板到 templates_backup 目录</div>
+    </div>
+    <div class="action-card patch" id="card-patch" onclick="actionPatch()">
+      <div class="action-card-icon">🚀</div>
+      <div class="action-card-title">一键破甲</div>
+      <div class="action-card-desc">替换为网安/逆向研究破甲策略，并重新打包 app.asar</div>
+    </div>
+    <div class="action-card custom" id="card-custom" onclick="actionCustom()">
+      <div class="action-card-icon">✏️</div>
+      <div class="action-card-title">自定义策略</div>
+      <div class="action-card-desc">输入自定义 content_policy 内容并替换到模板中</div>
+    </div>
+    <div class="action-card restore" id="card-restore" onclick="actionRestore()">
+      <div class="action-card-icon">⏪</div>
+      <div class="action-card-title">恢复原始</div>
+      <div class="action-card-desc">从备份还原官方原始提示词模板，并重新打包</div>
+    </div>
+  </div>
+
+  <!-- Template Table -->
+  <div class="info-panel" id="templatePanel" style="display:none;">
+    <div class="section-title">
+      <span class="section-title-icon">📋</span>
+      模板文件清单
+    </div>
+    <table class="template-table">
+      <thead>
+        <tr>
+          <th>文件名</th>
+          <th>大小</th>
+          <th>修改时间</th>
+          <th>策略状态</th>
+        </tr>
+      </thead>
+      <tbody id="templateBody">
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Log Console -->
+  <div class="log-console" id="logConsole">
+    <div class="log-empty">等待操作日志...</div>
+  </div>
+
+  <!-- Custom Policy Modal -->
+  <div class="modal-overlay" id="customModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span>自定义安全策略</span>
+        <button class="modal-close" onclick="closeModal('customModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 10px; font-size: 12px; color: var(--text-secondary);">
+          输入自定义 &lt;content_policy&gt; 内容，将替换到所有包含该标签的模板中：
+        </div>
+        <textarea class="modal-textarea" id="customPolicyText"
+          placeholder="<content_policy>&#10;  在此处输入您的自定义安全策略...&#10;</content_policy>"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('customModal')">取消</button>
+        <button class="btn btn-warning" onclick="submitCustomPolicy()">确认替换</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span id="confirmTitle">确认操作</span>
+        <button class="modal-close" onclick="closeModal('confirmModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-confirm-text" id="confirmText"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('confirmModal')">取消</button>
+        <button class="btn btn-primary" id="confirmOkBtn" onclick="">确认执行</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+      <div class="loading-spinner-lg"></div>
+      <div class="loading-text" id="loadingText">正在执行操作，请稍候...</div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // 全局状态
+    // ============================================================
+    let currentPath = '';
+    let pathValid = false;
+
+    // ============================================================
+    // localStorage 路径持久化
+    // ============================================================
+    const STORAGE_KEY = 'workbuddy_resources_dir';
+
+    function loadStoredPath() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        document.getElementById('pathInput').value = stored;
+        currentPath = stored;
+        return stored;
+      }
+      return null;
+    }
+
+    function savePathToStorage(path) {
+      localStorage.setItem(STORAGE_KEY, path);
+      currentPath = path;
+    }
+
+    // ============================================================
+    // API 调用封装
+    // ============================================================
+    async function apiCall(url, method = 'GET', body = null) {
+      const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+      };
+      if (body) options.body = JSON.stringify(body);
+      const resp = await fetch(url, options);
+      return await resp.json();
+    }
+
+    // ============================================================
+    // 日志控制台
+    // ============================================================
+    function addLog(message, type = '') {
+      const console = document.getElementById('logConsole');
+      // 移除空提示
+      const empty = console.querySelector('.log-empty');
+      if (empty) empty.remove();
+
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      entry.innerHTML = '<span class="log-time">[' + time + ']</span>' + escapeHtml(message);
+      console.appendChild(entry);
+      console.scrollTop = console.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ============================================================
+    // 路径管理
+    // ============================================================
+    async function detectPath() {
+      addLog('正在自动检测 WorkBuddy 安装路径...', 'info');
+      try {
+        const result = await apiCall('/api/status');
+        if (result.success && result.data.autoDetected) {
+          document.getElementById('pathInput').value = result.data.autoDetected;
+          savePathToStorage(result.data.autoDetected);
+          addLog('检测到路径: ' + result.data.autoDetected, 'success');
+          checkPath(result.data.autoDetected);
+        } else {
+          addLog('未自动检测到 WorkBuddy 安装路径，请手动输入。', 'warning');
+        }
+      } catch (e) {
+        addLog('连接服务器失败: ' + e.message, 'error');
+        updateServerStatus(false);
+      }
+    }
+
+    async function saveAndCheckPath() {
+      const input = document.getElementById('pathInput');
+      const path = input.value.trim();
+      if (!path) {
+        input.classList.add('invalid');
+        input.classList.remove('valid');
+        addLog('请输入资源路径', 'warning');
+        return;
+      }
+      savePathToStorage(path);
+      await checkPath(path);
+    }
+
+    async function checkPath(path) {
+      const input = document.getElementById('pathInput');
+      addLog('验证路径: ' + path, 'info');
+      try {
+        const result = await apiCall('/api/status?dir=' + encodeURIComponent(path));
+        if (result.success && result.data.valid) {
+          input.classList.add('valid');
+          input.classList.remove('invalid');
+          pathValid = true;
+          updateServerStatus(true);
+          renderInfo(result.data);
+          renderTemplates(result.data.templates || []);
+          addLog('路径验证成功，已找到 ' + result.data.templateCount + ' 个模板文件。', 'success');
+        } else {
+          input.classList.add('invalid');
+          input.classList.remove('valid');
+          pathValid = false;
+          hidePanels();
+          addLog('路径无效或不存在: ' + path, 'error');
+        }
+      } catch (e) {
+        addLog('验证失败: ' + e.message, 'error');
+        updateServerStatus(false);
+      }
+    }
+
+    // ============================================================
+    // UI 渲染
+    // ============================================================
+    function updateServerStatus(online) {
+      const badge = document.getElementById('serverStatus');
+      if (online) {
+        badge.className = 'status-badge online';
+        badge.textContent = '已连接';
+      } else {
+        badge.className = 'status-badge offline';
+        badge.textContent = '未连接';
+      }
+    }
+
+    function renderInfo(data) {
+      document.getElementById('infoPanel').style.display = 'block';
+      const grid = document.getElementById('infoGrid');
+      const patchedCount = data.patchedCount || 0;
+      const totalCount = data.templateCount || 0;
+      grid.innerHTML = `
+        <div class="info-item">
+          <div class="info-label">模板总数</div>
+          <div class="info-value">${totalCount}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">已破甲</div>
+          <div class="info-value">${patchedCount}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">原始模板</div>
+          <div class="info-value">${totalCount - patchedCount}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">备份状态</div>
+          <div class="info-value" style="font-size:14px; color:${data.backupExists ? 'var(--success)' : 'var(--error)'}">
+            ${data.backupExists ? '已备份' : '未备份'}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTemplates(templates) {
+      const panel = document.getElementById('templatePanel');
+      if (!templates || templates.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+      panel.style.display = 'block';
+      const body = document.getElementById('templateBody');
+      body.innerHTML = templates.map(t => {
+        const isPatched = t.hasContentPolicy && t.policyLength > 200;
+        const tagClass = t.hasContentPolicy ? (isPatched ? 'patched' : 'original') : 'unknown';
+        const tagText = !t.hasContentPolicy ? '无策略' : (isPatched ? '已破甲' : '原始');
+        return `
+          <tr>
+            <td style="font-family:monospace;">${escapeHtml(t.name)}</td>
+            <td>${formatSize(t.size)}</td>
+            <td>${new Date(t.modified).toLocaleString('zh-CN')}</td>
+            <td><span class="tag ${tagClass}">${tagText}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function hidePanels() {
+      document.getElementById('infoPanel').style.display = 'none';
+      document.getElementById('templatePanel').style.display = 'none';
+    }
+
+    function disableActionCards(disabled) {
+      document.querySelectorAll('.action-card').forEach(c => {
+        if (disabled) c.classList.add('disabled');
+        else c.classList.remove('disabled');
+      });
+    }
+
+    // ============================================================
+    // 操作函数
+    // ============================================================
+    function checkPathValid() {
+      if (!pathValid || !currentPath) {
+        addLog('请先设置并验证 WorkBuddy 资源路径', 'warning');
+        return false;
+      }
+      return true;
+    }
+
+    function showLoading(text) {
+      document.getElementById('loadingText').textContent = text || '正在执行操作，请稍候...';
+      document.getElementById('loadingOverlay').classList.add('active');
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.remove('active');
+    }
+
+    function showConfirm(title, text, onConfirm) {
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmText').innerHTML = text;
+      const btn = document.getElementById('confirmOkBtn');
+      btn.onclick = function() {
+        closeModal('confirmModal');
+        onConfirm();
+      };
+      document.getElementById('confirmModal').classList.add('active');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    // 备份
+    async function actionBackup() {
+      if (!checkPathValid()) return;
+      showConfirm('确认备份', '将备份所有官方原始提示词模板到 templates_backup 目录。<br><br>如果已有备份，将被覆盖。', async () => {
+        showLoading('正在备份模板...');
+        addLog('开始备份模板...', 'info');
+        try {
+          const result = await apiCall('/api/backup', 'POST', { resourcesDir: currentPath });
+          hideLoading();
+          result.logs.forEach(l => {
+            if (l.includes('[✅]')) addLog(l, 'success');
+            else if (l.includes('[❌]')) addLog(l, 'error');
+            else addLog(l, 'info');
+          });
+          await checkPath(currentPath);
+        } catch (e) {
+          hideLoading();
+          addLog('备份失败: ' + e.message, 'error');
+        }
+      });
+    }
+
+    // 破甲
+    async function actionPatch() {
+      if (!checkPathValid()) return;
+      showConfirm('确认破甲', '将替换所有模板中的 content_policy 为网安/逆向研究破甲策略，并重新打包 app.asar。<br><br><strong style="color:var(--error)">⚠️ 请确保 WorkBuddy 客户端已彻底关闭！</strong>', async () => {
+        showLoading('正在执行破甲替换并重新打包...');
+        addLog('开始一键破甲...', 'info');
+        try {
+          const result = await apiCall('/api/apply-policy', 'POST', {
+            resourcesDir: currentPath,
+            policyText: null // 使用默认网安策略
+          });
+          hideLoading();
+          result.logs.forEach(l => {
+            if (l.includes('[✅]') || l.includes('[✨]')) addLog(l, 'success');
+            else if (l.includes('[❌]')) addLog(l, 'error');
+            else if (l.includes('[⚠️]')) addLog(l, 'warning');
+            else addLog(l, 'info');
+          });
+          await checkPath(currentPath);
+        } catch (e) {
+          hideLoading();
+          addLog('破甲失败: ' + e.message, 'error');
+        }
+      });
+    }
+
+    // 自定义策略
+    function actionCustom() {
+      if (!checkPathValid()) return;
+      document.getElementById('customPolicyText').value = '';
+      document.getElementById('customModal').classList.add('active');
+    }
+
+    async function submitCustomPolicy() {
+      const text = document.getElementById('customPolicyText').value.trim();
+      if (!text) {
+        addLog('自定义策略内容为空，已取消', 'warning');
+        closeModal('customModal');
+        return;
+      }
+      closeModal('customModal');
+      showLoading('正在应用自定义策略并重新打包...');
+      addLog('开始应用自定义策略...', 'info');
+      try {
+        const result = await apiCall('/api/apply-policy', 'POST', {
+          resourcesDir: currentPath,
+          policyText: text
+        });
+        hideLoading();
+        result.logs.forEach(l => {
+          if (l.includes('[✅]') || l.includes('[✨]')) addLog(l, 'success');
+          else if (l.includes('[❌]')) addLog(l, 'error');
+          else if (l.includes('[⚠️]')) addLog(l, 'warning');
+          else addLog(l, 'info');
+        });
+        await checkPath(currentPath);
+      } catch (e) {
+        hideLoading();
+        addLog('自定义策略应用失败: ' + e.message, 'error');
+      }
+    }
+
+    // 恢复
+    async function actionRestore() {
+      if (!checkPathValid()) return;
+      showConfirm('确认恢复', '将从备份还原所有官方原始提示词模板，并重新打包 app.asar。<br><br><strong style="color:var(--error)">⚠️ 请确保 WorkBuddy 客户端已彻底关闭！</strong>', async () => {
+        showLoading('正在恢复原始模板并重新打包...');
+        addLog('开始恢复原始备份...', 'info');
+        try {
+          const result = await apiCall('/api/restore', 'POST', { resourcesDir: currentPath });
+          hideLoading();
+          result.logs.forEach(l => {
+            if (l.includes('[✅]') || l.includes('[✨]')) addLog(l, 'success');
+            else if (l.includes('[❌]')) addLog(l, 'error');
+            else if (l.includes('[⚠️]')) addLog(l, 'warning');
+            else addLog(l, 'info');
+          });
+          await checkPath(currentPath);
+        } catch (e) {
+          hideLoading();
+          addLog('恢复失败: ' + e.message, 'error');
+        }
+      });
+    }
+
+    // ============================================================
+    // 初始化
+    // ============================================================
+    async function init() {
+      addLog('Web UI 已加载，正在检查服务器连接...', 'info');
+      // 尝试自动检测路径
+      try {
+        const result = await apiCall('/api/status');
+        if (result.success) {
+          updateServerStatus(true);
+          addLog('服务器连接成功', 'success');
+          // 加载 localStorage 中保存的路径
+          const stored = loadStoredPath();
+          if (stored) {
+            await checkPath(stored);
+          } else if (result.data.autoDetected) {
+            // 自动检测到路径
+            document.getElementById('pathInput').value = result.data.autoDetected;
+            savePathToStorage(result.data.autoDetected);
+            await checkPath(result.data.autoDetected);
+            addLog('自动检测到路径: ' + result.data.autoDetected, 'success');
+          } else {
+            addLog('未检测到 WorkBuddy 路径，请手动输入。', 'warning');
+          }
+        }
+      } catch (e) {
+        updateServerStatus(false);
+        addLog('无法连接服务器，请确认 server.js 已启动', 'error');
+        const stored = loadStoredPath();
+        if (stored) {
+          addLog('已加载上次保存的路径: ' + stored, 'info');
+        }
+      }
+    }
+
+    // Enter key on path input
+    document.getElementById('pathInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') saveAndCheckPath();
+    });
+
+    // Start
+    init();
+  </script>
+</body>
+</html>
