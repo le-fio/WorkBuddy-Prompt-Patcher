@@ -430,11 +430,12 @@ const server = http.createServer(async (req, res) => {
   sendJson(res, 404, { success: false, error: 'Not Found' });
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, '::', () => {
   console.log(`\n==================================================`);
   console.log(`   🛡️ WorkBuddy Prompt Patcher - Web UI`);
   console.log(`==================================================`);
-  console.log(`   服务已启动: http://127.0.0.1:${PORT}`);
+  console.log(`   服务已启动: http://localhost:${PORT}`);
+  console.log(`              http://127.0.0.1:${PORT}`);
   console.log(`   按 Ctrl+C 退出`);
   console.log(`==================================================\n`);
 });
