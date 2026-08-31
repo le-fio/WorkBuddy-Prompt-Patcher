@@ -498,10 +498,11 @@
       </div>
       <div class="modal-body">
         <div style="margin-bottom: 10px; font-size: 12px; color: var(--text-secondary);">
-          输入自定义 &lt;content_policy&gt; 内容，将替换到所有包含该标签的模板中：
+          选择要应用的策略版本，或将下方文本框留空以使用所选版本；输入内容则作为自定义策略：
         </div>
+        <select id="customPolicyVersion" class="modal-textarea" style="min-height:auto; padding:8px 12px; margin-bottom:10px;"></select>
         <textarea class="modal-textarea" id="customPolicyText"
-          placeholder="<content_policy>&#10;  在此处输入您的自定义安全策略...&#10;</content_policy>"></textarea>
+          placeholder="（可选）在此输入自定义 &lt;content_policy&gt; 覆盖所选版本..."></textarea>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('customModal')">取消</button>
@@ -797,16 +798,21 @@
       });
     }
 
-    // 破甲
+// 破甲
     async function actionPatch() {
       if (!checkPathValid()) return;
-      showConfirm('确认破甲', '将替换所有模板中的 content_policy 为网安/逆向研究破甲策略，并重新打包 app.asar。<br><br><strong style="color:var(--error)">⚠️ 请确保 WorkBuddy 客户端已彻底关闭！</strong>', async () => {
+      await loadPolicyVersions();
+      const sel = document.getElementById('customPolicyVersion');
+      const defaultVersion = sel.value || 'V3';
+      const verName = policyVersions.find(p => p.id === defaultVersion);
+      showConfirm('确认破甲', `将替换所有模板中的 content_policy 为网安/逆向研究破甲策略，并重新打包 app.asar。<br><br>策略版本：<strong>${verName ? verName.name : defaultVersion}</strong><br><br><strong style="color:var(--error)">⚠️ 请确保 WorkBuddy 客户端已彻底关闭！</strong>`, async () => {
         showLoading('正在执行破甲替换并重新打包...');
         addLog('开始一键破甲...', 'info');
         try {
           const result = await apiCall('/api/apply-policy', 'POST', {
             resourcesDir: currentPath,
-            policyText: null // 使用默认网安策略
+            policyId: defaultVersion,
+            policyText: null
           });
           hideLoading();
           result.logs.forEach(l => {
@@ -822,28 +828,47 @@
         }
       });
     }
+      });
+    }
 
     // 自定义策略
     function actionCustom() {
       if (!checkPathValid()) return;
+      loadPolicyVersions();
       document.getElementById('customPolicyText').value = '';
       document.getElementById('customModal').classList.add('active');
     }
 
-    async function submitCustomPolicy() {
-      const text = document.getElementById('customPolicyText').value.trim();
-      if (!text) {
-        addLog('自定义策略内容为空，已取消', 'warning');
-        closeModal('customModal');
-        return;
+    // 加载策略库版本到下拉
+    let policyVersions = [];
+    async function loadPolicyVersions() {
+      try {
+        const result = await apiCall('/api/policies');
+        if (result.success) {
+          policyVersions = result.data || [];
+          const sel = document.getElementById('customPolicyVersion');
+          sel.innerHTML = policyVersions.map(p =>
+            `<option value="${p.id}">${p.name}</option>`).join('');
+        }
+      } catch (e) {
+        addLog('加载策略版本失败: ' + e.message, 'error');
       }
+    }
+
+    async function submitCustomPolicy() {
+      const version = document.getElementById('customPolicyVersion').value;
+      const text = document.getElementById('customPolicyText').value.trim();
+      // 若自定义文本为空，则使用所选策略库版本
+      const policyId = text ? null : (version || 'V3');
+      const policyText = text || null;
       closeModal('customModal');
-      showLoading('正在应用自定义策略并重新打包...');
-      addLog('开始应用自定义策略...', 'info');
+      showLoading('正在应用策略并重新打包...');
+      addLog('开始应用策略...', 'info');
       try {
         const result = await apiCall('/api/apply-policy', 'POST', {
           resourcesDir: currentPath,
-          policyText: text
+          policyId,
+          policyText
         });
         hideLoading();
         result.logs.forEach(l => {
