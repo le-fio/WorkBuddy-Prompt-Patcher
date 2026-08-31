@@ -37,7 +37,8 @@ function autoDetectResourcesDir() {
       path.join(localAppData, 'Programs', 'WorkBuddy', 'resources'),
       'D:\\Users\\' + path.basename(homeDir) + '\\AppData\\Local\\Programs\\WorkBuddy\\resources',
       path.join(programFiles, 'WorkBuddy', 'resources'),
-      path.join(programFilesX86, 'WorkBuddy', 'resources')
+      path.join(programFilesX86, 'WorkBuddy', 'resources'),
+      'C:\\WorkBuddy\\resources'
     ];
   } else if (platform === 'darwin') {
     candidatePaths = [
