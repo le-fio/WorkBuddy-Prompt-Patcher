@@ -121,7 +121,7 @@ function repackAsar(paths) {
     // app_temp 不存在 → 先解包 app.asar
     console.log('[📦] app_temp 目录不存在，正在执行 npx asar extract 解包...');
     try {
-      execSync(`npx @electron/asar extract "${paths.appAsarPath}" "${paths.appTempDir}"`, { stdio: 'inherit' });
+      execSync(`npx @electron/asar@3.2.10 extract "${paths.appAsarPath}" "${paths.appTempDir}"`, { stdio: 'inherit' });
       console.log('[✅] 解包成功。');
     } catch (err) {
       console.error('[❌] 解包失败：', err.message);
@@ -146,7 +146,7 @@ function repackAsar(paths) {
   console.log('[📦] 正在执行 npx @electron/asar pack 重新打包（带 --unpack 参数）...');
   try {
     execSync(
-      `npx @electron/asar pack "${paths.appTempDir}" "${paths.appAsarPath}" --unpack "*.{node,dll,exe,so,dylib,framework,app,bin,wasm}"`,
+      `npx @electron/asar@3.2.10 pack "${paths.appTempDir}" "${paths.appAsarPath}" --unpack "*.{node,dll,exe,so,dylib,framework,app,bin,wasm}"`,
       { stdio: 'inherit' }
     );
     console.log('\n[✅] 封包成功！请重新启动 WorkBuddy 客户端使改动生效。');
