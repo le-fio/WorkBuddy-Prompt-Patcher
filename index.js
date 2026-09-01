@@ -16,7 +16,6 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const readline = require('readline');
-const { execSync } = require('child_process');
 
 // 1. 动态自动探测系统下的 WorkBuddy 安装资源目录 (无硬编码)
 function autoDetectResourcesDir() {
@@ -36,7 +35,8 @@ function autoDetectResourcesDir() {
       // 检查常用盘符 (C/D/E)
       'D:\\Users\\' + path.basename(homeDir) + '\\AppData\\Local\\Programs\\WorkBuddy\\resources',
       path.join(programFiles, 'WorkBuddy', 'resources'),
-      path.join(programFilesX86, 'WorkBuddy', 'resources')
+      path.join(programFilesX86, 'WorkBuddy', 'resources'),
+      'C:\\WorkBuddy\\resources'
     ];
   } else if (platform === 'darwin') {
     // macOS 常见安装路径
@@ -215,42 +215,59 @@ function resolvePolicy(input) {
   return { id: 'CUSTOM', content: input };
 }
 
-// 重新打包 app.asar（修复版：每次重新解包 + 正确 --unpack 参数）
-function repackAsar(paths) {
-  const appTempTemplates = path.join(paths.appTempDir, 'resources', 'templates');
+// ============================================================
+// 重要：无需重新封包 app.asar
+// 经分析确认，WorkBuddy 的 .tpl 模板文件在 asar 头部标记为 unpacked: true，
+// 实际内容存放在 app.asar.unpacked/resources/templates/ 目录中（明文）。
+// Electron 运行时直接从 unpacked 目录读取模板，修改该目录文件即可生效，
+// 无需 extract/pack asar，避免了破坏 asar 内部结构（如 renderer/ 目录）。
+// ============================================================
 
-  // 步骤1：每次重新解包，确保 app_temp 内容与最新 asar 一致
-  if (fs.existsSync(paths.appTempDir)) {
-    fs.rmSync(paths.appTempDir, { recursive: true, force: true });
-  }
-  console.log('[📦] 正在解包 app.asar 到 app_temp...');
+// ============================================================
+// 只读保护（防 WorkBuddy 更新/运行时复写模板）
+// - 写入前解锁（幂等，重复注入安全）
+// - 写入后加锁（Windows 上 chmod 0o444 映射为只读属性）
+// ============================================================
+
+// 判断文件是否只读（无写权限位）
+function isFileReadOnly(fullPath) {
   try {
-    execSync(`npx @electron/asar@3.2.10 extract "${paths.appAsarPath}" "${paths.appTempDir}"`, { stdio: 'inherit' });
-    console.log('[✅] 解包成功。');
-  } catch (err) {
-    console.error('[❌] 解包失败：', err.message);
-    console.warn('[⚠️] 已更新明文模板，但未执行 app.asar 封包。');
-    return;
+    const st = fs.statSync(fullPath);
+    return st.isFile() && !(st.mode & 0o200);
+  } catch (e) {
+    return false;
   }
+}
 
-  // 步骤2：将修改后的模板覆盖到 app_temp
-  console.log('[🔄] 正在同步模板到 app_temp 目录...');
-  fs.cpSync(paths.templatesDir, appTempTemplates, { recursive: true, force: true });
-
-  // 注意：不需要手动合并 app.asar.unpacked 内容到 app_temp
-  // asar pack --unpack 会自动将匹配的原生模块排除到 app.asar.unpacked 目录
-
-  // 步骤3：用正确的 --unpack 参数重新打包
-  // 原生模块必须排除在 asar 包外，否则 Electron 无法从包内加载
-  console.log('[📦] 正在执行 npx @electron/asar pack 重新打包（带 --unpack 参数）...');
+// 解锁单个文件（只读时才 chmod，返回是否发生了解锁）
+function unlockFile(fullPath) {
   try {
-    execSync(
-      `npx @electron/asar@3.2.10 pack "${paths.appTempDir}" "${paths.appAsarPath}" --unpack "*.{node,dll,exe,so,dylib,framework,app,bin,wasm}"`,
-      { stdio: 'inherit' }
-    );
-    console.log('\n[✅] 封包成功！请重新启动 WorkBuddy 客户端使改动生效。');
-  } catch (err) {
-    console.error('[❌] 打包失败，请检查 WorkBuddy 客户端是否已彻底关闭：', err.message);
+    if (isFileReadOnly(fullPath)) {
+      fs.chmodSync(fullPath, 0o666);
+      return true;
+    }
+  } catch (e) { /* 忽略，后续写入报错时自然可见 */ }
+  return false;
+}
+
+// 解锁目录下所有模板文件，返回解锁数量
+function unlockTemplatesDir(dir) {
+  let n = 0;
+  if (!fs.existsSync(dir)) return 0;
+  for (const f of fs.readdirSync(dir)) {
+    if (unlockFile(path.join(dir, f))) n++;
+  }
+  return n;
+}
+
+// 加锁单个文件（设置只读），失败时输出警告
+function lockFile(fullPath) {
+  try {
+    fs.chmodSync(fullPath, 0o444);
+    return true;
+  } catch (e) {
+    console.warn(`[⚠️] 设置只读失败: ${path.basename(fullPath)}: ${e.message}`);
+    return false;
   }
 }
 
@@ -261,6 +278,9 @@ function backupTemplates(paths) {
     console.error(`[❌] 未找到模板目录：${paths.templatesDir}`);
     return;
   }
+  // 旧备份文件可能带只读属性，先解锁避免覆盖报 EPERM
+  const unlocked = unlockTemplatesDir(paths.backupDir);
+  if (unlocked > 0) console.log(`[🔓] 已解除旧备份中 ${unlocked} 个文件的只读属性`);
   fs.cpSync(paths.templatesDir, paths.backupDir, { recursive: true, force: true });
   console.log(`[✅] 备份成功！备份文件已保存至：\n    ${paths.backupDir}`);
 }
@@ -298,6 +318,7 @@ function applyPolicy(paths, policyText) {
 
   const files = fs.readdirSync(paths.templatesDir);
   let count = 0;
+  let lockedCount = 0;
 
   files.forEach(file => {
     const fullPath = path.join(paths.templatesDir, file);
@@ -326,14 +347,20 @@ function applyPolicy(paths, policyText) {
       });
 
       if (modified) {
+        // 写入前解锁（重复注入时文件已带只读属性，先解除）
+        const wasLocked = unlockFile(fullPath);
+        if (wasLocked) console.log(`  -> 解除只读: ${file}`);
         fs.writeFileSync(fullPath, content, 'utf8');
+        // 写入后立即加锁，防止 WorkBuddy 更新/运行时复写
+        if (lockFile(fullPath)) lockedCount++;
         count++;
       }
     }
   });
 
   console.log(`[✨] 成功更新了 ${count} 个提示词模板文件。`);
-  repackAsar(paths);
+  console.log(`[🔒] 已为 ${lockedCount} 个模板设置只读保护（更新程序/普通写入无法复写）。`);
+  console.log('[✅] 模板已直接写入 unpacked 目录，重启 WorkBuddy 即可生效。');
 }
 
 // 策略版本选择子菜单（CLI 选项 2）
@@ -362,9 +389,11 @@ function restoreBackup(paths) {
     console.error('[❌] 恢复失败：未找到备份目录 templates_backup！');
     return;
   }
+  // 目标文件可能带只读属性（上轮注入时加锁），先解锁避免覆盖报 EPERM
+  const unlocked = unlockTemplatesDir(paths.templatesDir);
+  if (unlocked > 0) console.log(`[🔓] 已解除 ${unlocked} 个模板的只读属性`);
   fs.cpSync(paths.backupDir, paths.templatesDir, { recursive: true, force: true });
-  console.log('[✨] 模板已还原至官方原始状态。');
-  repackAsar(paths);
+  console.log('[✨] 模板已还原至官方原始状态（保持可写，如需防复写请重新注入）。重启 WorkBuddy 即可生效。');
 }
 
 // 手动设置资源目录
