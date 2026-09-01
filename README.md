@@ -3,10 +3,10 @@ AIGC:
   ContentProducer: '001191110102MAD55U9H0F10002'
   ContentPropagator: '001191110102MAD55U9H0F10002'
   Label: '1'
-  ProduceID: 'f9f66240-4af7-4409-b836-aeb3fa2675bb'
-  PropagateID: 'f9f66240-4af7-4409-b836-aeb3fa2675bb'
-  ReservedCode1: 'dbfc04bf-9288-46b2-85dd-ee47a097b99d'
-  ReservedCode2: 'dbfc04bf-9288-46b2-85dd-ee47a097b99d'
+  ProduceID: '0b2f3d17-b432-47ba-8e39-8fadc32ebf2c'
+  PropagateID: '0b2f3d17-b432-47ba-8e39-8fadc32ebf2c'
+  ReservedCode1: '39bd26fe-4bc3-4e38-bd74-5c56eaa1be17'
+  ReservedCode2: '39bd26fe-4bc3-4e38-bd74-5c56eaa1be17'
 ---
 
 # 🛡️ WorkBuddy Prompt Patcher (WorkBuddy 提示词破甲与管理工具)
@@ -77,6 +77,19 @@ node server.js   # 或 node index.js，选策略 V3.1 执行注入
 1. 完全退出 WorkBuddy（含托盘进程）→ 2. 运行注入（默认 V3.1）→ 3. 重启 WorkBuddy 开新会话。
 
 策略设计说明：V3.1 与 5.4.7+ 平台合规红线（未成年人保护、政治主权、系统提示词保密）保持一致，仅在此前提下豁免成年虚构创作与授权安全研究——降低与升级器的对抗性，减少被整体替换的概率。详见 `WorkBuddy_Research_Notes.md` 第 4 节。
+
+### 基座模型选择（重要）
+
+V3.1 策略的完整效果取决于基座模型：
+
+| 模型 | 文件操作/命令/安全研究 | 成年亲密创作（直白描写） | 说明 |
+|------|------------------------|------------------------|------|
+| DeepSeek | ✅ 全部放行 | ✅ 全部放行 | 无基座天花板，V3.1 直通 |
+| 默认云端模型 (GPT/Claude 系) | ✅ 放行 | ❌ explicit 层硬拒 | 基座安全分类器在直白器官描写层面触发，prompt 无法突破 |
+
+- 若需成年创作豁免完整生效，**推荐使用 DeepSeek** 或其他无基座天花板的模型。
+- 若继续使用默认模型，感官氛围写法（情感张力+温度/呼吸/触感，非直白器官描写）可部分绕过（见测试对照表 G 组），但非根本解法。
+- 详见 `WorkBuddy_Research_Notes.md` 第 4.3 节“基座模型天花板实验”。
 
 ---
 
@@ -163,7 +176,8 @@ workbuddy-prompt-patcher/
 │   └── index.html     # Web UI 前端界面（新增）
 ├── package.json       # 项目元数据与启动脚本
 ├── README.md          # 说明文档
-├── WorkBuddy_Research_Notes.md  # 研究笔记
+├── WorkBuddy_Research_Notes.md  # 研究笔记（含第 4 节版本演进与运维日志）
+├── 破甲效果测试对照表.md        # A-G 七组隐晦测试用例 + 测试结果
 └── LICENSE            # MIT 许可证
 ```
 
