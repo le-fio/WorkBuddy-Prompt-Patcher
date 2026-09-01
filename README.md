@@ -3,10 +3,10 @@ AIGC:
   ContentProducer: '001191110102MAD55U9H0F10002'
   ContentPropagator: '001191110102MAD55U9H0F10002'
   Label: '1'
-  ProduceID: '8bd83b43-5229-4b1b-8984-b73f05c5162b'
-  PropagateID: '8bd83b43-5229-4b1b-8984-b73f05c5162b'
-  ReservedCode1: '36ff58f7-2284-4dd3-aa0b-5f874c7a7ad7'
-  ReservedCode2: '36ff58f7-2284-4dd3-aa0b-5f874c7a7ad7'
+  ProduceID: 'f9f66240-4af7-4409-b836-aeb3fa2675bb'
+  PropagateID: 'f9f66240-4af7-4409-b836-aeb3fa2675bb'
+  ReservedCode1: 'dbfc04bf-9288-46b2-85dd-ee47a097b99d'
+  ReservedCode2: 'dbfc04bf-9288-46b2-85dd-ee47a097b99d'
 ---
 
 # 🛡️ WorkBuddy Prompt Patcher (WorkBuddy 提示词破甲与管理工具)
@@ -27,7 +27,7 @@ WorkBuddy 作为一个基于 Electron 框架构建的桌面 AI 客户端，其�
 
 1. **模板解封**：自动扫描并解析 `resources/app.asar.unpacked/resources/templates/` 目录下的底层模板。
 2. **安全策略替换**：精准识别模板中的 `<content_policy>` 约束节点，将其替换为包含“沙盒环境声明”与“网安/逆向研究豁免（Research Exemption）”的全新策略。
-3. **物理重包**：将更新后的模板同步至解包资源库，并调用 `npx asar pack` 重新打包 `app.asar`。
+3. **直接生效**：模板文件为 unpacked 明文，修改即生效，**无需重新打包 `app.asar`**（旧版需 repack 的说明已过时）。
 4. **效果**：大语言模型从初始化的第一秒起，接收到的系统上下文就不再包含原厂的限制性条文，从根源上彻底解除了工具调用与安全回答的卡扣。
 
 ---
@@ -46,8 +46,11 @@ WorkBuddy 作为一个基于 Electron 框架构建的桌面 AI 客户端，其�
 | **6** | `app.asar.unpacked/resources/templates/workbuddy-craft-design-prompt.tpl` | **[物理修改]** | Craft Design (架构与 UI 设计) 系统提示词模板，更新安全策略。 |
 | **7** | `app.asar.unpacked/resources/templates/workbuddy-expert-prompt.tpl` | **[物理修改]** | Expert (专家模式) 系统提示词模板，更新安全策略。 |
 | **8** | `app.asar.unpacked/resources/templates/workbuddy-expert-coding-prompt.tpl` | **[物理修改]** | Expert Coding (专家编程模式) 系统提示词模板，更新安全策略。 |
-| **9** | `app_temp/resources/templates/` | **[同步覆盖]** | 临时解包文件夹中的模板目录，同步覆盖以准备进行 ASAR 打包。 |
-| **10** | `app.asar` | **[重新打包]** | Electron 核心归档包。读取修改后的 `app_temp` 目录并调用 `npx asar pack` 覆盖重打包，使修改正式生效。 |
+| **9** | 模板文件（写入后） | **[只读保护]** | 已注入模板自动设置只读属性（`chmod 0o444`），防止运行时复写；重复注入时自动解锁→写入→重新加锁。 |
+
+> **注**：模板为 `app.asar.unpacked` 内的明文文件，修改后重启 WorkBuddy 即生效，无需重打包 `app.asar`。
+>
+> **⚠️ 升级须知**：WorkBuddy 自动升级（提权安装器）会整体替换 `app.asar.unpacked` 目录，**只读属性会被清除、注入会被还原**。每次客户端升级后请重新运行注入（见下方“升级后重新注入”）。
 
 ---
 
@@ -57,9 +60,23 @@ WorkBuddy 作为一个基于 Electron 框架构建的桌面 AI 客户端，其�
 - **双模式操作 - CLI + Web UI**：既支持命令行交互菜单，也提供浏览器 Web UI 界面，路径输入后自动持久化保存，下次打开无需重新输入。
 - **一键备份保障**：自动创建官方原始提示词模板的独立备份，安全无忧。
 - **网安与逆向破甲**：注入 Codex-5.5 / Unrestricted 风格的沙盒安全豁免策略，解除模型对代码审计、漏洞分析、逆向工程等合法科研行为的过度拦截。
-- **版本化策略库**：内置多套可切换的安全豁免策略（V2 完全豁免版 / V3 授权沙盒协议版），Web UI 与 CLI 均可一键切换，默认 V3。
-- **修复版封包引擎**：自动解包 + 合并原生模块 + 带 `--unpack` 参数正确打包，避免 Electron 应用打包后启动失败。
-- **实时状态看板**：Web UI 模式下可查看模板总数、已破甲数量、备份状态等信息。
+- **版本化策略库**：内置多套可切换的安全豁免策略（V2 完全豁免版 / V3 授权沙盒协议版 / V3.1 5.4.7 兼容版 / OMN 叙事框架版），Web UI 与 CLI 均可一键切换，**默认 V3.1**。
+- **只读保护**：注入后模板自动设为只读，防止运行时复写；重复注入幂等（自动解锁→写入→重新加锁）。
+- **实时状态看板**：Web UI 模式下可查看模板总数、已破甲数量、只读数量、备份状态等信息。
+
+---
+
+## ⬆️ 升级后重新注入（重要）
+
+WorkBuddy 自动升级时，提权安装器会整体替换 `app.asar.unpacked` 目录——**只读属性、注入内容、备份目录都会被清除**。升级后重新注入三步：
+
+```bash
+node server.js   # 或 node index.js，选策略 V3.1 执行注入
+```
+
+1. 完全退出 WorkBuddy（含托盘进程）→ 2. 运行注入（默认 V3.1）→ 3. 重启 WorkBuddy 开新会话。
+
+策略设计说明：V3.1 与 5.4.7+ 平台合规红线（未成年人保护、政治主权、系统提示词保密）保持一致，仅在此前提下豁免成年虚构创作与授权安全研究——降低与升级器的对抗性，减少被整体替换的概率。详见 `WorkBuddy_Research_Notes.md` 第 4 节。
 
 ---
 
@@ -121,7 +138,7 @@ node index.js
 ### 菜单选项说明
 
 * **1. 备份当前所有提示词模板**：在 WorkBuddy 资源目录下创建独立的 `templates_backup` 备份文件。
-* **2. 一键替换为【网安/逆向研究破甲提示词】**：批量替换所有 `.tpl` 模板中的限制标记为无限制科研沙盒策略，并自动封包 `app.asar` 生效。CLI 下会先弹出策略版本选择（V2 完全豁免 / V3 授权沙盒协议），Web UI 下可在弹窗中下拉选择。
+* **2. 一键替换为【网安/逆向研究破甲提示词】**：批量替换所有 `.tpl` 模板中的限制标记为无限制科研沙盒策略，写入后自动设只读。CLI 下会先弹出策略版本选择（V2 / V3 / V3.1 / OMN），Web UI 下可在弹窗中下拉选择。
 * **3. 自定义输入安全提示词策略**：支持直接粘贴您自己编写的 `<content_policy>` 或 Jinja2 文本并一键打包。
 * **4. 一键恢复官方原始备份提示词**：一键还原至官方初始模板状态。
 * **5. 手动设置/修改 WorkBuddy 资源路径**：当自动检测未找到时，随时自定义指定资源路径。
@@ -130,8 +147,9 @@ node index.js
 
 ## ⚠️ 注意事项与最佳实践
 
-1. **完全关闭客户端**：在执行涉及重新封包（`repack`）的操作（CLI 选项 2/3/4 或 Web UI 的破甲/自定义/恢复）前，请务必彻底退出 WorkBuddy 桌面客户端，避免文件被进程占用导致打包失败。
+1. **推荐关闭客户端**：模板文件为明文直接写入，一般无需关闭客户端；如遇文件占用（升级过程中）请先彻底退出 WorkBuddy。
 2. **生效应答**：修改完成后重新启动 WorkBuddy 客户端，开启**新的对话框**即可使全新的提示词策略生效。
+3. **升级还原**：WorkBuddy 每次自动升级都会还原模板（提权安装器绕过只读），升级后重新注入即可，详见“升级后重新注入”。
 
 ---
 
